@@ -15,21 +15,40 @@ with open(os.path.join(input_path, 'driving_log.csv')) as csvfile:
     for line in reader:
         lines.append(line)
 
+line_array = np.array(lines)
+
+#calculate moving average
+data = line_array[:,3]
+data = data.astype(float)
+
+numparts = 5
+w = np.arange(1., numparts+1.)
+w = w/np.sum(w)
+
+test = np.array([0.0,0.0])
+ma = np.convolve(data,w[::-1],'valid')
+
+ma_1 = np.concatenate((test, ma), axis = 0)
+ma_2 = np.concatenate((ma_1, test), axis = 0)
+ma_2 = ma_2.reshape(len(ma_2), 1)
+
+all_data = np.hstack((line_array, ma_2))
+
 images = []
 measurements = []
-for line in lines:
+for line in all_data:
     source_path = line[0]
-    correction = 0.4
+    correction = 0.2
     filename = source_path.split('/')[-1]
     current_path = os.path.join(os.path.join(input_path, 'IMG/', filename))
     image = cv2.imread(current_path)
     images.append(image)
     if 'left' in current_path:
-        measurement = np.round(float(line[3]), decimals=2) + correction
+        measurement = np.round(float(line[7]), decimals=2) + correction
     elif 'right' in current_path:
-        measurement = np.round(float(line[3]), decimals=2) - correction
+        measurement = np.round(float(line[7]), decimals=2) - correction
     else :
-        measurement = np.round(float(line[3]), decimals=2)
+        measurement = np.round(float(line[7]), decimals=2)
     measurements.append(measurement)
 
 augmented_images, augmented_measurements = [], []
@@ -74,32 +93,32 @@ model.add(Cropping2D(cropping=((70,25), (0,0))))
 model.add(Conv2D(24,(5,5), activation='relu'))
 #model.add(ELU())
 model.add(BatchNormalization())
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 
 model.add(Conv2D(36,(5,5), activation='relu'))
 #model.add(ELU())
 model.add(BatchNormalization())
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 
 model.add(Conv2D(48,(5,5), activation='relu'))
 #model.add(ELU())
 model.add(BatchNormalization())
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 
 model.add(Conv2D(64,(3,3), activation='relu'))
 #model.add(ELU())
 model.add(BatchNormalization())
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 
 model.add(Conv2D(64,(3,3), activation='relu'))
 #model.add(ELU())
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 #model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
 
 model.add(Flatten())
 #model.add(ELU())
 
-model.add(Dense(100))
+model.add(Dense(50))
 model.add(Dropout(0.4))
 model.add(ELU())
 
@@ -119,11 +138,11 @@ history_object = model.fit(x=X_train, y=y_train
                            , batch_size = 8
                            , verbose=1
                            , validation_split=0.01
-                           , epochs=10)
+                           , epochs=5)
 
 #model.fit(X_train, y_train, validation_split=0.4, shuffle=True, epochs=10)
 
-model.save('model_15.h5')
+model.save('model_17.h5')
 
 import matplotlib.pyplot as plt
 
