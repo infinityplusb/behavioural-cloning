@@ -3,8 +3,11 @@ import cv2
 import os
 import numpy as np
 
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+#os.environ["CUDA_VISIBLE_DEVICES"]="1"
 import tensorflow as tf
+
+#import keras as K
+#gpus = K.get_session().list_devices() 
 #run_opts = tf.RunOptions(report_tensor_allocations_upon_oom = True)
 
 input_path = '/home/brian/Documents/Training/Udacity/Self_Driving_Car/beta_simulator_linux/beta_simulator_Data/'
@@ -95,7 +98,6 @@ def generator(samples, type1, batch_size = 32):
                 # do the left image
                 image = cv2.imread(line[1])
                 measurement = np.float16(line[3]) + correction
-                imageCount  += 1
                 images.append(image)
                 measurements.append(measurement)
                 # flip the left image
@@ -105,7 +107,6 @@ def generator(samples, type1, batch_size = 32):
                 # do the right image
                 image = cv2.imread(line[2])
                 measurement = np.float16(line[3]) - correction
-                imageCount  += 1
                 images.append(image)
                 measurements.append(measurement)
                 # flip the right image
@@ -117,32 +118,60 @@ def generator(samples, type1, batch_size = 32):
                 yield shuffle(X_train, y_train)
 
 
-batch_size = 8
+batch_size = 32
 
 train_generator = generator(train_samples, type1='train', batch_size=batch_size)
 validation_generator = generator(validation_samples, type1='valid', batch_size=batch_size)
 
+from keras.utils import multi_gpu_model
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda
 from keras.layers import Conv2D, MaxPooling2D, Cropping2D
-#from keras.layers import BatchNormalization
+from keras.layers import BatchNormalization
+from keras.layers import ELU
 from keras.layers import Dropout
 
+with tf.device("/cpu:0"):
+    model = Sequential()
+
 model = Sequential()
+model = multi_gpu_model(model, gpus=2, cpu_relocation=True)
 model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160, 320, 3))) #, output_shape=(160, 320, 3)))
 model.add(Cropping2D(cropping=((70,25), (0,0))))
 
 model.add(Conv2D(24,(5,5), activation='relu'))
+model.add(ELU())
+model.add(BatchNormalization())
 model.add(Conv2D(36,(5,5), activation='relu'))
+model.add(ELU())
+model.add(BatchNormalization())
 model.add(Conv2D(48,(5,5), activation='relu'))
+model.add(ELU())
+model.add(BatchNormalization())
 model.add(Conv2D(64,(3,3), activation='relu'))
+model.add(ELU())
+model.add(BatchNormalization())
 model.add(Conv2D(64,(3,3), activation='relu'))
+model.add(ELU())
+
 #model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
 
 model.add(Flatten())
+model.add(ELU())
 
-model.add(Dense(50))
+model.add(Dense(512))
 model.add(Dropout(0.6))
+model.add(ELU())
+
+model.add(Dense(100))
+model.add(Dropout(0.6))
+model.add(ELU())
+
+model.add(Dense(10))
+model.add(Dropout(0.6))
+model.add(ELU())
+
+
 # Batch Normalisation
 #model.add(BatchNormalization())
 
@@ -165,7 +194,7 @@ print(np.ceil(len(train_samples)/batch_size))
 print(np.ceil(len(validation_samples)/batch_size))
 #model.fit(X_train, y_train, validation_split=0.4, shuffle=True, epochs=10)
 
-model.save('model_08.h5')
+model.save('model_09.h5')
 
 import matplotlib.pyplot as plt
 
