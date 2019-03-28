@@ -2,3 +2,5 @@
 training_images/
 
 validing_images/
+
+*.h5
