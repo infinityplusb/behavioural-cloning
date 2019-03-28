@@ -6,8 +6,11 @@ import numpy as np
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
 import tensorflow as tf
 
-input_path = '/home/brian/Documents/Training/Udacity/Self_Driving_Car/beta_simulator_linux/beta_simulator_Data/'
+#input_path = '/home/brian/Documents/Training/Udacity/Self_Driving_Car/beta_simulator_linux/beta_simulator_Data/'
+input_path = '/home/brian/Documents/Training/Udacity/Self_Driving_Car/data/data/data/'
 image_path = input_path + 'IMG/'
+
+#x = numpy.delete(x, (0), axis=0)
 
 lines = []
 with open(os.path.join(input_path, 'driving_log.csv')) as csvfile:
@@ -37,19 +40,20 @@ all_data = np.hstack((line_array, ma_2))
 images = []
 measurements = []
 for line in all_data:
-    source_path = line[0]
-    correction = 0.2
-    filename = source_path.split('/')[-1]
-    current_path = os.path.join(os.path.join(input_path, 'IMG/', filename))
-    image = cv2.imread(current_path)
-    images.append(image)
-    if 'left' in current_path:
-        measurement = np.round(float(line[7]), decimals=2) + correction
-    elif 'right' in current_path:
-        measurement = np.round(float(line[7]), decimals=2) - correction
-    else :
-        measurement = np.round(float(line[7]), decimals=2)
-    measurements.append(measurement)
+    for i in range(3):
+        source_path = line[0]
+        correction = 0.2
+        filename = source_path.split('/')[-1]
+        current_path = os.path.join(os.path.join(input_path, 'IMG/', filename))
+        image = cv2.imread(current_path)
+        images.append(image)
+        if 'left' in current_path:
+            measurement = np.round(float(line[7]), decimals=2) + correction
+        elif 'right' in current_path:
+            measurement = np.round(float(line[7]), decimals=2) - correction
+        else :
+            measurement = np.round(float(line[7]), decimals=2)
+        measurements.append(measurement)
 
 augmented_images, augmented_measurements = [], []
 for image, measurement in zip(images, measurements):
@@ -118,16 +122,20 @@ model.add(Dropout(0.3))
 model.add(Flatten())
 #model.add(ELU())
 
-model.add(Dense(50))
-model.add(Dropout(0.4))
-model.add(ELU())
-
-#model.add(Dense(50))
+#model.add(Dense(100))
 #model.add(Dropout(0.4))
 #model.add(ELU())
 
+model.add(Dense(512))
+model.add(Dropout(0.5))
+model.add(ELU())
+
+model.add(Dense(100))
+model.add(Dropout(0.5))
+model.add(ELU())
+
 model.add(Dense(10))
-model.add(Dropout(0.4))
+model.add(Dropout(0.5))
 model.add(ELU())
 
 model.add(Dense(1))
@@ -138,11 +146,11 @@ history_object = model.fit(x=X_train, y=y_train
                            , batch_size = 8
                            , verbose=1
                            , validation_split=0.01
-                           , epochs=5)
+                           , epochs=6)
 
 #model.fit(X_train, y_train, validation_split=0.4, shuffle=True, epochs=10)
 
-model.save('model_17.h5')
+model.save('model_23.h5')
 
 import matplotlib.pyplot as plt
 
