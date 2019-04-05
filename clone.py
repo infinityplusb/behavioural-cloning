@@ -6,6 +6,8 @@ import numpy as np
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
 import tensorflow as tf
 
+import random
+
 #input_path = '/home/brian/Documents/Training/Udacity/Self_Driving_Car/beta_simulator_linux/beta_simulator_Data/'
 input_path = '/home/brian/Documents/Training/Udacity/Self_Driving_Car/data/data/data/'
 image_path = input_path + 'IMG/'
@@ -46,14 +48,20 @@ for line in all_data:
         filename = source_path.split('/')[-1]
         current_path = os.path.join(os.path.join(input_path, 'IMG/', filename))
         image = cv2.imread(current_path)
-        images.append(image)
         if 'left' in current_path:
             measurement = np.round(float(line[7]), decimals=2) + correction
         elif 'right' in current_path:
             measurement = np.round(float(line[7]), decimals=2) - correction
         else :
             measurement = np.round(float(line[7]), decimals=2)
-        measurements.append(measurement)
+        if measurement == 0:
+            if random.randint(1,11) <= 2 :                
+                images.append(image)
+                measurements.append(measurement)
+        else:
+            images.append(image)
+            measurements.append(measurement)
+
 
 augmented_images, augmented_measurements = [], []
 for image, measurement in zip(images, measurements):
@@ -65,19 +73,31 @@ for image, measurement in zip(images, measurements):
     # add brightness
     bright_image = cv2.cvtColor(image,cv2.COLOR_RGB2HSV)
     bright_image[:,:,2] = bright_image[:,:,2]*random_bright       
-    augmented_images.append(bright_image)
-    augmented_measurements.append(measurement)
- 
-    augmented_images.append(cv2.flip(image,1))
-    augmented_measurements.append(measurement*-1.0)
-    augmented_images.append(cv2.flip(bright_image,1))
-    augmented_measurements.append(measurement*-1.0)
+
+    if measurement == 0:
+        if random.randint(1,11) <= 2 :
+            augmented_images.append(bright_image)
+            augmented_measurements.append(measurement)
+            augmented_images.append(cv2.flip(image,1))
+            augmented_measurements.append(measurement*-1.0)
+            augmented_images.append(cv2.flip(bright_image,1))
+            augmented_measurements.append(measurement*-1.0)
+    else:
+        augmented_images.append(bright_image)
+        augmented_measurements.append(measurement)
+        augmented_images.append(cv2.flip(image,1))
+        augmented_measurements.append(measurement*-1.0)
+        augmented_images.append(cv2.flip(bright_image,1))
+        augmented_measurements.append(measurement*-1.0)
      
-
-
-
 X_train = np.array(augmented_images)
 y_train = np.array(augmented_measurements)
+
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+n, bins, patches = plt.hist(augmented_measurements, 50, normed=1, facecolor='green', alpha=0.75)
+
+
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda
